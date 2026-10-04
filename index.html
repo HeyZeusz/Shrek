@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swamp Defender</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0a0a;
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 24px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">Score: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+
+        // Key tracking
+        const keys = {
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+            w: false, a: false, s: false, d: false,
+            ' ': false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+        });
+
+        class Player {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.width = 60;
+                this.height = 60;
+                this.speed = 7;
+                this.lastFireTime = 0;
+                this.fireRate = 150; // Faster firing rate
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Draw HD Shrek Face
+                // Head base (Ogre Green)
+                ctx.fillStyle = '#7CFC00';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 30, 25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Shading / Depth
+                ctx.strokeStyle = '#559c00';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Trumpet Ears
+                ctx.fillStyle = '#7CFC00';
+                ctx.beginPath();
+                ctx.moveTo(-30, -5);
+                ctx.lineTo(-45, -15);
+                ctx.lineTo(-45, 5);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(30, -5);
+                ctx.lineTo(45, -15);
+                ctx.lineTo(45, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // Eyes
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-10, -5, 5, 0, Math.PI * 2);
+                ctx.arc(10, -5, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#4b3621'; // Brown pupils
+                ctx.beginPath();
+                ctx.arc(-10, -5, 2, 0, Math.PI * 2);
+                ctx.arc(10, -5, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Nose and Mouth
+                ctx.fillStyle = '#559c00';
+                ctx.beginPath();
+                ctx.arc(0, 5, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 10, 10, 0, Math.PI);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            update() {
+                if (keys.ArrowUp || keys.w) this.y -= this.speed;
+                if (keys.ArrowDown || keys.s) this.y += this.speed;
+                if (keys.ArrowLeft || keys.a) this.x -= this.speed;
+                if (keys.ArrowRight || keys.d) this.x += this.speed;
+
+                // Keep in bounds
+                this.x = Math.max(30, Math.min(canvas.width - 30, this.x));
+                this.y = Math.max(30, Math.min(canvas.height - 30, this.y));
+
+                // Shooting
+                if (keys[' '] && Date.now() - this.lastFireTime > this.fireRate) {
+                    this.shoot();
+                    this.lastFireTime = Date.now();
+                }
+            }
+
+            shoot() {
+                // Four onions in a slight spread
+                projectiles.push(new Projectile(this.x, this.y - 30, -2, -10));
+                projectiles.push(new Projectile(this.x - 15, this.y - 20, -0.5, -10));
+                projectiles.push(new Projectile(this.x + 15, this.y - 20, 0.5, -10));
+                projectiles.push(new Projectile(this.x, this.y - 30, 2, -10));
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, velocityX, velocityY) {
+                this.x = x;
+                this.y = y;
+                this.vx = velocityX;
+                this.vy = velocityY;
+                this.radius = 8;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Detailed Layered Onion
+                ctx.fillStyle = '#e6e6fa'; // Outer skin (lavender)
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#c8a2c8'; // Skin texture lines
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#f8f8ff'; // Inner layer
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#7CFC00'; // Green sprout top
+                ctx.beginPath();
+                ctx.moveTo(-2, -this.radius);
+                ctx.lineTo(0, -this.radius - 4);
+                ctx.lineTo(2, -this.radius);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.radius = Math.random() * 15 + 10;
+                this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+                this.y = -this.radius;
+                this.speed = Math.random() * 2 + 1;
+                this.color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+        }
+
+        const player = new Player();
+        const projectiles = [];
+        const enemies = [];
+        let animationId;
+        let frames = 0;
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            player.update();
+            player.draw();
+
+            // Handle Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.update();
+                p.draw();
+
+                // Remove off-screen projectiles
+                if (p.y + p.radius < 0) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // Spawn Enemies
+            if (frames % 60 === 0) {
+                enemies.push(new Enemy());
+            }
+
+            // Handle Enemies & Collisions
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.update();
+                e.draw();
+
+                // Enemy off-screen
+                if (e.y - e.radius > canvas.height) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                // Projectile hits Enemy
+                for (let j = projectiles.length - 1; j >= 0; j--) {
+                    const p = projectiles[j];
+                    const dist = Math.hypot(p.x - e.x, p.y - e.y);
+
+                    if (dist - e.radius - p.radius < 0) {
+                        enemies.splice(i, 1);
+                        projectiles.splice(j, 1);
+                        score += 10;
+                        scoreElement.innerText = score;
+                        break; 
+                    }
+                }
+            }
+            frames++;
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+        });
+    </script>
+</body>
+</html>
